@@ -1,13 +1,28 @@
 import streamlit as st
 from googleapiclient.discovery import build
 from datetime import datetime
+import gspread
 import os
+import json
+from oauth2client.service_account import ServiceAccountCredentials
 
-# 改成讀 Render 的環境變數
-API_KEY = os.environ.get("YOUTUBE_KEY")
+# ====== 設定 API 金鑰與 Sheets 憑證 ======
+YOUTUBE_API_KEY = "AIzaSyB-vJVbuZAu7-4pHUqt8JaGdhfKle8m4cI"
 
-# YouTube API 初始化
-youtube = build("youtube", "v3", developerKey=API_KEY)
+# Google Sheet 連結與名稱
+SHEET_NAME = "YouTube流量紀錄"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/12U90TfY6uJyrqfaCjYs0zW8uMYgdaDomzzJYlpfV-bE"
+
+# ====== 載入 Google Sheets 憑證 ======
+# 將金鑰 json 放到本地或 Render，並透過環境變數指向
+creds_dict = json.loads(st.secrets["google_sheets"])
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+client = gspread.authorize(credentials)
+sheet = client.open_by_url(SHEET_URL).sheet1
+
+# ====== YouTube 分析功能 ======
+youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
 st.title("📺 YouTube 影片流量分析器")
 
@@ -28,34 +43,6 @@ if video_url:
             part="snippet,statistics",
             id=video_id
         ).execute()
-        
+
         if res["items"]:
             video = res["items"][0]
-            title = video["snippet"]["title"]
-            channel = video["snippet"]["channelTitle"]
-            published = video["snippet"]["publishedAt"]
-            views = int(video["statistics"].get("viewCount", 0))
-            likes = int(video["statistics"].get("likeCount", 0))
-            comments = int(video["statistics"].get("commentCount", 0))
-            published_dt = datetime.strptime(published, "%Y-%m-%dT%H:%M:%SZ")
-            age_days = (datetime.utcnow() - published_dt).days + 1
-
-            st.subheader("🎬 影片資訊")
-            st.write(f"標題：{title}")
-            st.write(f"頻道：{channel}")
-            st.write(f"上傳時間：{published_dt.strftime('%Y-%m-%d %H:%M')}")
-            st.write(f"觀看數：{views:,}")
-            st.write(f"按讚數：{likes:,}")
-            st.write(f"留言數：{comments:,}")
-            st.write(f"已上線天數：{age_days} 天")
-
-            # 預估：平均每日觀看數 × 30 天
-            daily_avg = views / age_days
-            predicted_total = daily_avg * 30
-            st.subheader("📈 流量推估")
-            st.write(f"目前平均每日觀看：約 {int(daily_avg):,} 次")
-            st.write(f"預估 30 天總觀看數：約 {int(predicted_total):,} 次")
-        else:
-            st.error("查無影片資訊，請確認網址正確")
-    else:
-        st.error("無法解析影片 ID")
