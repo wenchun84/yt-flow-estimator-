@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import pandas as pd
 from googleapiclient.discovery import build
@@ -73,29 +74,29 @@ if video_url:
         video_data = fetch_video_data(video_id)
         if video_data:
             result = estimate_traffic(video_data)
+
+            # 顯示在畫面上
             st.dataframe(pd.DataFrame([result]))
 
-            # 寫入 Google Sheets
-            values = list(result.values())
+            # ✅ 寫入 Google Sheets
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            values = [
+                now,
+                video_url,
+                video_data["videoId"],
+                video_data["title"],
+                video_data["viewCount"],
+                video_data["likeCount"],
+                video_data["commentCount"],
+                video_data["publishedAt"],
+                result["預估總流量"]
+            ]
             sheet.append_row(values)
 
-            # 擷取歷史紀錄並繪圖
+            # 📈 擷取歷史紀錄並繪圖
             history = pd.DataFrame(sheet.get_all_records())
             if not history.empty and "分析時間" in history and "觀看數" in history:
                 history["分析時間"] = pd.to_datetime(history["分析時間"])
                 plot_growth(history[history["影片ID"] == video_id])
         else:
             st.warning("⚠️ 找不到影片資料，可能該影片不存在或設為私人。")
-# 寫入 Google Sheets
-values = [
-    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 分析時間
-    video_url,                                     # 影片連結
-    video_data["videoId"],
-    video_data["title"],
-    video_data["viewCount"],
-    video_data["likeCount"],
-    video_data["commentCount"],
-    video_data["publishedAt"],
-    result["預估總流量"]
-]
-sheet.append_row(values)
