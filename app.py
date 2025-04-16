@@ -1,27 +1,48 @@
 import streamlit as st
-import gspread
-import pandas as pd
-from oauth2client.service_account import ServiceAccountCredentials
+from googleapiclient.discovery import build
 
-# 設定 Google Sheets 權限 scope
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+# YouTube API 金鑰（來自 secrets.toml）
+API_KEY = st.secrets["youtube"]["api_key"]
 
-# 從 secrets.toml 載入金鑰
-creds_dict = dict(st.secrets["google_sheets"])
-credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+# 建立 YouTube API 服務
+youtube = build("youtube", "v3", developerKey=API_KEY)
 
-# 授權並打開 Sheet
-gc = gspread.authorize(credentials)
+# Streamlit 介面
+st.title("📺 YouTube 影片流量預估工具")
+video_url = st.text_input("請輸入 YouTube 影片連結", "")
 
-# ✅ 使用 Sheet ID 開啟
-sheet_id = "12U90TfY6uJyrqfaCjYs0zW8uMYgdaDomzzJYlpfV-bE"  # << 替換成你的
-sh = gc.open_by_key(sheet_id)
+if video_url:
+    try:
+        # 解析影片 ID
+        if "v=" in video_url:
+            video_id = video_url.split("v=")[-1].split("&")[0]
+        elif "youtu.be/" in video_url:
+            video_id = video_url.split("youtu.be/")[-1].split("?")[0]
+        else:
+            st.error("⚠️ 無法解析影片 ID，請確認連結格式正確")
+            st.stop()
 
-# 開啟指定工作表
-worksheet = sh.sheet1
-data = worksheet.get_all_records()
-df = pd.DataFrame(data)
+        # 呼叫 YouTube API 取得影片資訊
+        response = youtube.videos().list(
+            part="snippet,statistics",
+            id=video_id
+        ).execute()
 
-# 顯示內容
-st.title("📊 Google Sheets 資料表")
-st.dataframe(df)
+        if response["items"]:
+            video = response["items"][0]
+            snippet = video["snippet"]
+            stats = video["statistics"]
+
+            # 顯示影片資訊
+            st.subheader(snippet["title"])
+            st.image(snippet["thumbnails"]["high"]["url"])
+            st.write("🧾 頻道名稱：", snippet["channelTitle"])
+            st.write("👁️‍🗨️ 觀看數：", stats.get("viewCount", "N/A"))
+            st.write("👍 喜歡數：", stats.get("likeCount", "N/A"))
+            st.write("💬 留言數：", stats.get("commentCount", "N/A"))
+
+        else:
+            st.warning("⚠️ 找不到該影片，請確認影片 ID 是否正確")
+
+    except Exception as e:
+        st.error(f"🚨 錯誤：{e}")
