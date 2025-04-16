@@ -14,7 +14,7 @@ credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope
 gc = gspread.authorize(credentials)
 
 # ✅ 使用 Sheet ID 開啟
-sheet_id = "1ABCdEfGhiJkLmNopQRstuvWxyZ0123456789abcdEFg"  # << 替換成你的
+sheet_id = "streamlit-sheets@your-project-id.iam.gserviceaccount.com"  # << 替換成你的
 sh = gc.open_by_key(sheet_id)
 
 # 開啟指定工作表
