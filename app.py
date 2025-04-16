@@ -1,9 +1,9 @@
 import streamlit as st
 from googleapiclient.discovery import build
 from datetime import datetime
-
-# 讀取 API Key
 import os
+
+# 改成讀 Render 的環境變數
 API_KEY = os.environ.get("YOUTUBE_KEY")
 
 # YouTube API 初始化
