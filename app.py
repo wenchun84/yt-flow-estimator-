@@ -3,7 +3,8 @@ from googleapiclient.discovery import build
 from datetime import datetime
 
 # 讀取 API Key
-API_KEY = st.secrets["api"]["youtube_key"]
+import os
+API_KEY = os.environ.get("YOUTUBE_KEY")
 
 # YouTube API 初始化
 youtube = build("youtube", "v3", developerKey=API_KEY)
