@@ -15,7 +15,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/12U90TfY6uJyrqfaCjYs0zW8uMYg
 
 # ====== 載入 Google Sheets 憑證 ======
 # 將金鑰 json 放到本地或 Render，並透過環境變數指向
-creds_dict = json.loads(st.secrets["google_sheets"])
+creds_dict = st.secrets["google_sheets"]
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(credentials)
