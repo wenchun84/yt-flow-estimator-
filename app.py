@@ -3,28 +3,23 @@ import gspread
 import pandas as pd
 from oauth2client.service_account import ServiceAccountCredentials
 
-# 設定 Google Sheets API scope
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
+# 設定 scope
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-# 將 st.secrets 轉為 dict（避免 AttrDict 問題）
+# 讀取並轉為 dict
 creds_dict = dict(st.secrets["google_sheets"])
-
-# 授權 Google Sheets
 credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
+# 授權
 gc = gspread.authorize(credentials)
 
-# 讀取你的 Google Sheets 網址或 ID
-sheet_url = "https://docs.google.com/spreadsheets/d/你的_Sheet_ID/"  # 👈請換成你的網址
-
-# 抓取資料並轉為 DataFrame
+# 指定 Google Sheet
+sheet_url = "https://docs.google.com/spreadsheets/d/你的_Sheet_ID/"
 sh = gc.open_by_url(sheet_url)
 worksheet = sh.sheet1
 data = worksheet.get_all_records()
 df = pd.DataFrame(data)
 
-# 顯示結果
+# 顯示
 st.title("📊 Google Sheets 資料表")
 st.dataframe(df)
