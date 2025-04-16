@@ -8,6 +8,8 @@ from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import matplotlib.pyplot as plt
+from text_analysis import generate_analysis_text
+
 
 # ✅ 初始化 YouTube API
 api_key = st.secrets["youtube"]["api_key"]
@@ -77,6 +79,8 @@ if video_url:
 
             # 顯示在畫面上
             st.dataframe(pd.DataFrame([result]))
+            st.markdown(generate_analysis_text(result))
+
 
             # ✅ 寫入 Google Sheets
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
