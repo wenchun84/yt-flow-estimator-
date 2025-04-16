@@ -1,35 +1,57 @@
+# analytics.py
 from datetime import datetime
-import math
 
-def estimate_traffic(data):
-    # 解析資料
-    view_count = data["viewCount"]
-    like_count = data["likeCount"]
-    comment_count = data["commentCount"]
-    publish_time = datetime.strptime(data["publishedAt"], "%Y-%m-%dT%H:%M:%SZ")
-    
+# ✅ 精緻估算函式（加入 Shorts / 長影片分類 + 日成長衰減）
+def estimate_traffic(video_data):
+    views = video_data["viewCount"]
+    likes = video_data["likeCount"]
+    comments = video_data["commentCount"]
+    published = video_data["publishedAt"]
+    video_id = video_data["videoId"]
+    title = video_data["title"]
+    url = f"https://www.youtube.com/watch?v={video_id}"
+
+    # 影片上傳時間
+    published_time = datetime.strptime(published, "%Y-%m-%dT%H:%M:%SZ")
     now = datetime.utcnow()
-    days_online = (now - publish_time).days or 1  # 避免除以 0
+    days_since_upload = max((now - published_time).days, 1)
 
-    # 互動率計算
-    interaction_rate = (like_count + comment_count) / view_count
+    # 分類是否為 Shorts（ID ≤ 12 或網址中包含 shorts）
+    is_shorts = len(video_id) <= 12 or "shorts" in url.lower()
 
-    # 日成長率估算（視互動率、日均觀看數推估）
-    daily_growth_rate = min(max(interaction_rate * 3, 0.01), 0.08)  # 限制在 1%~8%
+    # 計算互動率
+    interaction_rate = (likes + comments) / views if views > 0 else 0
 
-    # 預估未來 30 天
-    projected_views = view_count
-    for _ in range(30 - days_online):
-        projected_views += projected_views * daily_growth_rate
+    # 📊 分類模型參數
+    if is_shorts:
+        base_growth = 0.0025
+        multiplier = 1.8
+        max_growth = 0.015
+    else:
+        base_growth = 0.0015
+        multiplier = 1.6
+        max_growth = 0.01
+
+    # 📈 日成長率計算（可微調）
+    raw_growth = base_growth + interaction_rate * multiplier
+    adjusted_growth = min(raw_growth, max_growth)
+
+    # 📉 日成長衰減：每 5 天遞減 10%
+    total_estimate = 0
+    for day in range(30):
+        decay_factor = 0.9 ** (day // 5)
+        daily = views * adjusted_growth * decay_factor
+        total_estimate += daily
 
     return {
         "分析時間": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "影片連結": f"https://www.youtube.com/watch?v={data['videoId']}",
-        "影片ID": data["videoId"],
-        "標題": data["title"],
-        "觀看數": view_count,
-        "按讚數": like_count,
-        "留言數": comment_count,
-        "上傳時間": publish_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "預估總流量": int(projected_views)
+        "影片連結": url,
+        "影片ID": video_id,
+        "標題": title,
+        "觀看數": views,
+        "按讚數": likes,
+        "留言數": comments,
+        "上傳時間": published_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "互動率": round(interaction_rate * 100, 2),
+        "預估總流量": int(views + total_estimate)
     }
