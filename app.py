@@ -1,21 +1,29 @@
 import streamlit as st
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import json
+from oauth2client.service_account import ServiceAccountCredentials
 
-# 掛載認證
+# 設定 scope
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# 將 st.secrets 轉換為 JSON dict
 creds_dict = st.secrets["google_sheets"]
-credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-client = gspread.authorize(credentials)
+creds_json = json.dumps(creds_dict)
+credentials = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(creds_json), scope)
 
-# 打開 Google Sheet（請換成你自己的 Sheet URL 或名稱）
-SPREADSHEET_NAME = "你的試算表名稱"
-sheet = client.open(SPREADSHEET_NAME).sheet1
-data = sheet.get_all_records()
+# 授權並打開 Sheet
+gc = gspread.authorize(credentials)
 
-# 顯示資料
+# ✅ 請替換為你的 Google Sheet 網址或 ID
+sheet_url = "https://docs.google.com/spreadsheets/d/你的_Sheet_ID/"
+
+# 開啟並讀取資料
+sh = gc.open_by_url(sheet_url)
+worksheet = sh.sheet1
+data = worksheet.get_all_records()
 df = pd.DataFrame(data)
-st.title("📊 Google Sheets 資料預覽")
+
+# 顯示
+st.title("📊 Google Sheets 資料表")
 st.dataframe(df)
