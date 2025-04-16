@@ -86,3 +86,16 @@ if video_url:
                 plot_growth(history[history["影片ID"] == video_id])
         else:
             st.warning("⚠️ 找不到影片資料，可能該影片不存在或設為私人。")
+# 寫入 Google Sheets
+values = [
+    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # 分析時間
+    video_url,                                     # 影片連結
+    video_data["videoId"],
+    video_data["title"],
+    video_data["viewCount"],
+    video_data["likeCount"],
+    video_data["commentCount"],
+    video_data["publishedAt"],
+    result["預估總流量"]
+]
+sheet.append_row(values)
