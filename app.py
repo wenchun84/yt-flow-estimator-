@@ -14,7 +14,7 @@ credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope
 gc = gspread.authorize(credentials)
 
 # 指定 Google Sheet
-sheet_url = "https://docs.google.com/spreadsheets/d/你的_Sheet_ID/"
+sheet_url = "https://docs.google.com/spreadsheets/d/1dYgABCDE1234567890EfGhIJKLmnopQRstuVWxyz/edit#gid=0"
 sh = gc.open_by_url(sheet_url)
 worksheet = sh.sheet1
 data = worksheet.get_all_records()
