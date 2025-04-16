@@ -1,48 +1,59 @@
+# app.py
 import streamlit as st
+import pandas as pd
 from googleapiclient.discovery import build
+from urllib.parse import urlparse, parse_qs
+from analytics import estimate_traffic
 
-# YouTube API 金鑰（來自 secrets.toml）
-API_KEY = st.secrets["youtube"]["api_key"]
+# ✅ 初始化 YouTube API
+api_key = st.secrets["youtube"]["api_key"]
+youtube = build("youtube", "v3", developerKey=api_key)
 
-# 建立 YouTube API 服務
-youtube = build("youtube", "v3", developerKey=API_KEY)
+# 🎯 影片ID解析函式
+def extract_video_id(url):
+    parsed = urlparse(url)
+    if "youtu.be" in url:
+        return parsed.path.lstrip('/')
+    elif "youtube.com" in url:
+        return parse_qs(parsed.query).get("v", [None])[0]
+    return None
 
-# Streamlit 介面
-st.title("📺 YouTube 影片流量預估工具")
-video_url = st.text_input("請輸入 YouTube 影片連結", "")
+# 📡 呼叫 API 抓影片資訊
+def fetch_video_data(video_id):
+    response = youtube.videos().list(
+        part="snippet,statistics",
+        id=video_id
+    ).execute()
+
+    if not response["items"]:
+        return None
+
+    item = response["items"][0]
+    snippet = item["snippet"]
+    stats = item["statistics"]
+
+    return {
+        "videoId": video_id,
+        "title": snippet.get("title"),
+        "channelTitle": snippet.get("channelTitle"),
+        "publishedAt": snippet.get("publishedAt"),
+        "viewCount": int(stats.get("viewCount", 0)),
+        "likeCount": int(stats.get("likeCount", 0)),
+        "commentCount": int(stats.get("commentCount", 0))
+    }
+
+# 🖥️ Streamlit 介面
+st.title("📊 YouTube 流量預估檢測站")
+video_url = st.text_input("請輸入 YouTube 影片連結：")
 
 if video_url:
-    try:
-        # 解析影片 ID
-        if "v=" in video_url:
-            video_id = video_url.split("v=")[-1].split("&")[0]
-        elif "youtu.be/" in video_url:
-            video_id = video_url.split("youtu.be/")[-1].split("?")[0]
+    video_id = extract_video_id(video_url)
+    if not video_id:
+        st.error("❌ 無法解析影片 ID，請確認連結格式。")
+    else:
+        video_data = fetch_video_data(video_id)
+        if video_data:
+            result = estimate_traffic(video_data)
+            st.dataframe(pd.DataFrame([result]))
         else:
-            st.error("⚠️ 無法解析影片 ID，請確認連結格式正確")
-            st.stop()
-
-        # 呼叫 YouTube API 取得影片資訊
-        response = youtube.videos().list(
-            part="snippet,statistics",
-            id=video_id
-        ).execute()
-
-        if response["items"]:
-            video = response["items"][0]
-            snippet = video["snippet"]
-            stats = video["statistics"]
-
-            # 顯示影片資訊
-            st.subheader(snippet["title"])
-            st.image(snippet["thumbnails"]["high"]["url"])
-            st.write("🧾 頻道名稱：", snippet["channelTitle"])
-            st.write("👁️‍🗨️ 觀看數：", stats.get("viewCount", "N/A"))
-            st.write("👍 喜歡數：", stats.get("likeCount", "N/A"))
-            st.write("💬 留言數：", stats.get("commentCount", "N/A"))
-
-        else:
-            st.warning("⚠️ 找不到該影片，請確認影片 ID 是否正確")
-
-    except Exception as e:
-        st.error(f"🚨 錯誤：{e}")
+            st.warning("⚠️ 找不到影片資料，可能該影片不存在或設為私人。")
